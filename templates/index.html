@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>PPTX → PDF Converter</title>
+<style>
+  body {
+    font-family: -apple-system, Segoe UI, Arial, sans-serif;
+    background: #f4f5f7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    margin: 0;
+  }
+  .card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    padding: 40px;
+    width: 480px;
+    text-align: center;
+  }
+  h1 { font-size: 20px; margin-bottom: 8px; }
+  p.sub { color: #666; margin-top: 0; margin-bottom: 24px; font-size: 14px; }
+  #dropzone {
+    border: 2px dashed #bbb;
+    border-radius: 10px;
+    padding: 40px 20px;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  #dropzone.dragover {
+    border-color: #5b6cff;
+    background: #f0f1ff;
+  }
+  #dropzone p { margin: 0; color: #555; }
+  #fileInput { display: none; }
+  #fileList {
+    text-align: left;
+    margin-top: 16px;
+    font-size: 13px;
+    color: #333;
+    max-height: 150px;
+    overflow-y: auto;
+  }
+  #fileList div { padding: 4px 0; border-bottom: 1px solid #eee; }
+  button#convertBtn {
+    margin-top: 20px;
+    background: #5b6cff;
+    color: white;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    width: 100%;
+  }
+  button#convertBtn:disabled { background: #ccc; cursor: not-allowed; }
+  #status { margin-top: 14px; font-size: 13px; color: #444; min-height: 18px; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>PPTX → PDF Converter</h1>
+    <p class="sub">Drag and drop your .pptx files below, or click to browse.</p>
+
+    <div id="dropzone">
+      <p>📂 Drop PowerPoint files here</p>
+      <input type="file" id="fileInput" multiple accept=".pptx,.ppt">
+    </div>
+
+    <div id="fileList"></div>
+
+    <button id="convertBtn" disabled>Convert to PDF</button>
+    <div id="status"></div>
+  </div>
+
+<script>
+  const dropzone = document.getElementById('dropzone');
+  const fileInput = document.getElementById('fileInput');
+  const fileListEl = document.getElementById('fileList');
+  const convertBtn = document.getElementById('convertBtn');
+  const statusEl = document.getElementById('status');
+
+  let selectedFiles = [];
+
+  dropzone.addEventListener('click', () => fileInput.click());
+
+  dropzone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropzone.classList.add('dragover');
+  });
+
+  dropzone.addEventListener('dragleave', () => {
+    dropzone.classList.remove('dragover');
+  });
+
+  dropzone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropzone.classList.remove('dragover');
+    addFiles(e.dataTransfer.files);
+  });
+
+  fileInput.addEventListener('change', () => {
+    addFiles(fileInput.files);
+  });
+
+  function addFiles(fileListObj) {
+    for (const f of fileListObj) {
+      if (f.name.toLowerCase().endsWith('.pptx') || f.name.toLowerCase().endsWith('.ppt')) {
+        selectedFiles.push(f);
+      }
+    }
+    renderFileList();
+  }
+
+  function renderFileList() {
+    fileListEl.innerHTML = '';
+    selectedFiles.forEach(f => {
+      const div = document.createElement('div');
+      div.textContent = f.name;
+      fileListEl.appendChild(div);
+    });
+    convertBtn.disabled = selectedFiles.length === 0;
+  }
+
+  convertBtn.addEventListener('click', async () => {
+    if (selectedFiles.length === 0) return;
+
+    convertBtn.disabled = true;
+    statusEl.textContent = `Converting ${selectedFiles.length} file(s)... this may take a moment.`;
+
+    const formData = new FormData();
+    selectedFiles.forEach(f => formData.append('files', f));
+
+    try {
+      const res = await fetch('/convert', { method: 'POST', body: formData });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        statusEl.textContent = '❌ Error: ' + (err.error || res.statusText);
+        convertBtn.disabled = false;
+        return;
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'converted_pdfs.zip';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+
+      statusEl.textContent = '✅ Done! Your ZIP file has downloaded.';
+      selectedFiles = [];
+      renderFileList();
+    } catch (err) {
+      statusEl.textContent = '❌ Error: ' + err.message;
+    } finally {
+      convertBtn.disabled = false;
+    }
+  });
+</script>
+</body>
+</html>
