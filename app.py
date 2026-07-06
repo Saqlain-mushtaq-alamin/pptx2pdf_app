@@ -163,7 +163,7 @@ def convert_worker(job_id, file_paths, output_dir, output_format):
         "converted": converted, "failed": failed,
         "skipped": skipped, "total": total,
         "elapsed": elapsed,
-        "zip_kb": zip_kb if zip_path else 0,
+        "zip_kb": locals().get("zip_kb", 0) if zip_path else 0,
         "has_download": zip_path is not None,
         "msg": (f"Done — {converted} converted, {failed} failed, "
                 f"{skipped} skipped in {elapsed}s")
