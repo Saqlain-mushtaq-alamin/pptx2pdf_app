@@ -1,167 +1,797 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
-<title>PPTX → PDF Converter</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FileForge — Document Converter</title>
 <style>
-  body {
-    font-family: -apple-system, Segoe UI, Arial, sans-serif;
-    background: #f4f5f7;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100vh;
-    margin: 0;
-  }
-  .card {
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-    padding: 40px;
-    width: 480px;
-    text-align: center;
-  }
-  h1 { font-size: 20px; margin-bottom: 8px; }
-  p.sub { color: #666; margin-top: 0; margin-bottom: 24px; font-size: 14px; }
-  #dropzone {
-    border: 2px dashed #bbb;
-    border-radius: 10px;
-    padding: 40px 20px;
-    cursor: pointer;
-    transition: border-color 0.2s, background 0.2s;
-  }
-  #dropzone.dragover {
-    border-color: #5b6cff;
-    background: #f0f1ff;
-  }
-  #dropzone p { margin: 0; color: #555; }
-  #fileInput { display: none; }
-  #fileList {
-    text-align: left;
-    margin-top: 16px;
-    font-size: 13px;
-    color: #333;
-    max-height: 150px;
-    overflow-y: auto;
-  }
-  #fileList div { padding: 4px 0; border-bottom: 1px solid #eee; }
-  button#convertBtn {
-    margin-top: 20px;
-    background: #5b6cff;
-    color: white;
-    border: none;
-    padding: 10px 24px;
-    border-radius: 8px;
-    font-size: 14px;
-    cursor: pointer;
-    width: 100%;
-  }
-  button#convertBtn:disabled { background: #ccc; cursor: not-allowed; }
-  #status { margin-top: 14px; font-size: 13px; color: #444; min-height: 18px; }
+/* ── Tokens ───────────────────────────────────────────── */
+:root {
+  --bg:        #0d1117;
+  --surface:   #161b22;
+  --surface2:  #1f2937;
+  --border:    #30363d;
+  --border2:   #3d444d;
+  --accent:    #a78bfa;
+  --accent-dim:#7c3aed;
+  --green:     #34d399;
+  --red:       #f87171;
+  --yellow:    #fbbf24;
+  --blue:      #60a5fa;
+  --orange:    #fb923c;
+  --text:      #e2e8f0;
+  --text-sub:  #8b949e;
+  --text-dim:  #484f58;
+  --radius:    10px;
+  --mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', ui-monospace, monospace;
+  --sans: 'Inter', system-ui, -apple-system, sans-serif;
+}
+[data-theme="light"] {
+  --bg:        #f4f6f9;
+  --surface:   #ffffff;
+  --surface2:  #f0f2f5;
+  --border:    #d0d7de;
+  --border2:   #b8c0cc;
+  --text:      #1c2430;
+  --text-sub:  #57606a;
+  --text-dim:  #adb5bd;
+}
+
+/* ── Reset ────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 14px; }
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Header ───────────────────────────────────────────── */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 28px;
+  height: 52px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  position: sticky; top: 0; z-index: 100;
+}
+.logo {
+  display: flex; align-items: center; gap: 10px;
+  font-weight: 700; font-size: 15px; letter-spacing: -0.3px;
+}
+.logo-icon {
+  width: 28px; height: 28px; border-radius: 7px;
+  background: linear-gradient(135deg, #7c3aed, #a78bfa);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+}
+.logo-sub { font-size: 11px; color: var(--text-sub); font-weight: 400; margin-left: 2px; }
+.header-right { display: flex; align-items: center; gap: 12px; }
+.badge {
+  font-family: var(--mono); font-size: 10px; padding: 2px 8px;
+  border-radius: 20px; border: 1px solid var(--border);
+  color: var(--text-sub); background: var(--surface2);
+}
+.theme-btn {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 8px; width: 32px; height: 32px;
+  cursor: pointer; font-size: 15px;
+  display: flex; align-items: center; justify-content: center;
+  transition: border-color .15s;
+}
+.theme-btn:hover { border-color: var(--accent); }
+
+/* ── Soffice warning ──────────────────────────────────── */
+#lo-warning {
+  background: #451a03; border-bottom: 1px solid #92400e;
+  padding: 8px 28px; font-size: 12px; color: #fde68a;
+  display: none;
+}
+
+/* ── Main layout ──────────────────────────────────────── */
+main {
+  flex: 1; display: grid;
+  grid-template-columns: 1fr 340px;
+  grid-template-rows: auto 1fr;
+  gap: 0;
+  max-width: 1100px; width: 100%; margin: 0 auto;
+  padding: 24px 28px;
+  gap: 20px;
+}
+
+/* ── Section label ─────────────────────────────────────── */
+.section-label {
+  font-size: 11px; font-weight: 600; letter-spacing: .8px;
+  text-transform: uppercase; color: var(--text-sub);
+  margin-bottom: 10px;
+}
+
+/* ── Drop zone ────────────────────────────────────────── */
+.left-col { display: flex; flex-direction: column; gap: 16px; }
+
+#dropzone {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 40px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color .2s, background .2s;
+  background: var(--surface);
+  position: relative;
+}
+#dropzone.dragover {
+  border-color: var(--accent);
+  background: rgba(124,58,237,.06);
+}
+#dropzone input { display: none; }
+.drop-icon { font-size: 36px; margin-bottom: 12px; }
+.drop-title { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+.drop-sub { font-size: 12px; color: var(--text-sub); line-height: 1.6; }
+.drop-actions {
+  display: flex; gap: 10px; justify-content: center; margin-top: 16px;
+}
+.btn-outline {
+  padding: 7px 16px; border-radius: 7px;
+  border: 1px solid var(--border); background: var(--surface2);
+  color: var(--text); font-size: 12px; font-weight: 500;
+  cursor: pointer; transition: border-color .15s, background .15s;
+  display: flex; align-items: center; gap: 6px;
+}
+.btn-outline:hover { border-color: var(--accent); background: rgba(124,58,237,.08); }
+
+/* ── File queue ───────────────────────────────────────── */
+#file-queue {
+  background: var(--surface); border-radius: var(--radius);
+  border: 1px solid var(--border); overflow: hidden;
+  display: none; flex-direction: column;
+}
+.queue-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px; border-bottom: 1px solid var(--border);
+  font-size: 12px; font-weight: 600;
+}
+.queue-count {
+  font-family: var(--mono); font-size: 11px;
+  background: rgba(124,58,237,.15); color: var(--accent);
+  border-radius: 20px; padding: 2px 8px;
+}
+.clear-btn {
+  font-size: 11px; color: var(--text-sub); background: none;
+  border: none; cursor: pointer; padding: 2px 6px; border-radius: 4px;
+}
+.clear-btn:hover { color: var(--red); }
+#file-list {
+  max-height: 240px; overflow-y: auto;
+  scrollbar-width: thin; scrollbar-color: var(--border2) transparent;
+}
+.file-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 14px; border-bottom: 1px solid var(--border);
+  font-size: 12px; transition: background .1s;
+}
+.file-item:last-child { border-bottom: none; }
+.file-item:hover { background: var(--surface2); }
+.file-icon { font-size: 16px; flex-shrink: 0; }
+.file-info { flex: 1; min-width: 0; }
+.file-name { font-family: var(--mono); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.file-size { font-size: 10px; color: var(--text-sub); margin-top: 1px; }
+.file-ext-badge {
+  font-size: 9px; font-family: var(--mono); font-weight: 700;
+  padding: 2px 5px; border-radius: 4px; flex-shrink: 0; text-transform: uppercase;
+}
+.remove-btn {
+  background: none; border: none; color: var(--text-dim);
+  cursor: pointer; font-size: 14px; padding: 2px 4px;
+  border-radius: 4px; flex-shrink: 0; line-height: 1;
+  transition: color .15s;
+}
+.remove-btn:hover { color: var(--red); }
+
+/* ── Stats strip ──────────────────────────────────────── */
+#stats-strip {
+  display: none;
+  grid-column: 1 / -1;
+  display: none;
+  gap: 12px;
+}
+.stat-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 12px 16px;
+  display: flex; align-items: center; gap: 10px; flex: 1;
+}
+.stat-icon { font-size: 18px; }
+.stat-val { font-size: 18px; font-weight: 700; font-family: var(--mono); line-height: 1; }
+.stat-lbl { font-size: 11px; color: var(--text-sub); margin-top: 2px; }
+
+/* ── Right column ─────────────────────────────────────── */
+.right-col { display: flex; flex-direction: column; gap: 16px; }
+
+/* ── Format picker ────────────────────────────────────── */
+#format-section {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px;
+}
+#format-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  margin-top: 10px;
+}
+.fmt-card {
+  border: 1px solid var(--border); border-radius: 8px;
+  padding: 10px 6px; text-align: center; cursor: pointer;
+  transition: border-color .15s, background .15s, transform .1s;
+  background: var(--surface2);
+}
+.fmt-card:hover:not(.disabled) { border-color: var(--accent); transform: translateY(-1px); }
+.fmt-card.active { border-color: var(--accent); background: rgba(124,58,237,.12); }
+.fmt-card.disabled { opacity: .3; cursor: not-allowed; }
+.fmt-emoji { font-size: 18px; display: block; margin-bottom: 4px; }
+.fmt-name {
+  font-family: var(--mono); font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .5px;
+}
+.fmt-desc { font-size: 9px; color: var(--text-sub); margin-top: 2px; }
+
+/* ── Convert button ───────────────────────────────────── */
+#convert-btn {
+  width: 100%; padding: 13px;
+  background: linear-gradient(135deg, #7c3aed, #a78bfa);
+  border: none; border-radius: var(--radius);
+  color: #fff; font-size: 14px; font-weight: 700;
+  cursor: pointer; letter-spacing: .3px;
+  transition: opacity .15s, transform .1s;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+#convert-btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+#convert-btn:not(:disabled):hover { opacity: .9; transform: translateY(-1px); }
+
+/* ── Info box ─────────────────────────────────────────── */
+.info-box {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 14px 16px; font-size: 12px;
+  color: var(--text-sub); line-height: 1.7;
+}
+.info-box a { color: var(--accent); text-decoration: none; }
+.info-box a:hover { text-decoration: underline; }
+
+/* ── Progress panel ───────────────────────────────────── */
+#progress-panel {
+  grid-column: 1 / -1;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden;
+  display: none;
+}
+.panel-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px; border-bottom: 1px solid var(--border);
+  font-weight: 600; font-size: 13px;
+}
+.panel-header .status-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--yellow); margin-right: 8px;
+  animation: pulse-dot 1.2s ease-in-out infinite;
+}
+.panel-header .status-dot.done { background: var(--green); animation: none; }
+.panel-header .status-dot.error { background: var(--red); animation: none; }
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; } 50% { opacity: .3; }
+}
+
+.overall-progress {
+  padding: 14px 16px; border-bottom: 1px solid var(--border);
+}
+.progress-bar-wrap {
+  background: var(--surface2); border-radius: 4px; height: 6px;
+  overflow: hidden; margin-top: 6px;
+}
+.progress-bar-fill {
+  height: 100%; border-radius: 4px;
+  background: linear-gradient(90deg, #7c3aed, #a78bfa);
+  transition: width .3s ease; width: 0%;
+}
+.progress-label {
+  display: flex; justify-content: space-between;
+  font-size: 11px; color: var(--text-sub); margin-bottom: 4px;
+}
+
+/* ── Log panel ────────────────────────────────────────── */
+#log-panel {
+  font-family: var(--mono); font-size: 11.5px;
+  background: #0a0e14; max-height: 220px; overflow-y: auto;
+  padding: 12px 16px; line-height: 1.8;
+  scrollbar-width: thin; scrollbar-color: var(--border2) transparent;
+}
+[data-theme="light"] #log-panel { background: #1e2432; }
+.log-line { display: flex; gap: 10px; align-items: baseline; }
+.log-time { color: #484f58; flex-shrink: 0; font-size: 10px; }
+.log-msg  { }
+.log-done   { color: #34d399; }
+.log-error  { color: #f87171; }
+.log-skip   { color: #fbbf24; }
+.log-info   { color: #8b949e; }
+.log-start  { color: #a78bfa; }
+.log-complete { color: #60a5fa; font-weight: 700; }
+
+/* ── Result panel ─────────────────────────────────────── */
+#result-panel {
+  grid-column: 1 / -1;
+  background: var(--surface); border: 1px solid var(--green);
+  border-radius: var(--radius); padding: 20px 24px;
+  display: none;
+}
+.result-grid {
+  display: flex; gap: 20px; align-items: center; flex-wrap: wrap;
+}
+.result-stats { display: flex; gap: 24px; flex: 1; }
+.result-stat .val {
+  font-size: 24px; font-weight: 800; font-family: var(--mono); line-height: 1;
+}
+.result-stat .lbl { font-size: 11px; color: var(--text-sub); }
+.download-btn {
+  padding: 11px 24px;
+  background: var(--green); color: #0a1f14;
+  border: none; border-radius: 8px;
+  font-size: 13px; font-weight: 700; cursor: pointer;
+  transition: opacity .15s;
+  display: flex; align-items: center; gap: 8px;
+}
+.download-btn:hover { opacity: .85; }
+
+/* ── Scrollbars ───────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+/* ── Responsive ───────────────────────────────────────── */
+@media (max-width: 720px) {
+  main { grid-template-columns: 1fr; padding: 16px; gap: 14px; }
+  #progress-panel, #result-panel { grid-column: 1; }
+}
 </style>
 </head>
 <body>
-  <div class="card">
-    <h1>PPTX → PDF Converter</h1>
-    <p class="sub">Drag and drop your .pptx files below, or click to browse.</p>
 
-    <div id="dropzone">
-      <p>📂 Drop PowerPoint files here</p>
-      <input type="file" id="fileInput" multiple accept=".pptx,.ppt">
+<!-- ── Header ─────────────────────────────────────────── -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">⚒</div>
+    FileForge
+    <span class="logo-sub">/ document converter</span>
+  </div>
+  <div class="header-right">
+    <span class="badge">v2.0</span>
+    <button class="theme-btn" id="themeBtn" title="Toggle theme">🌙</button>
+  </div>
+</header>
+
+<!-- LibreOffice warning -->
+<div id="lo-warning">
+  ⚠ LibreOffice not detected at the default path.
+  Install it from <strong>libreoffice.org</strong> or edit
+  <code>POSSIBLE_SOFFICE</code> in <code>app.py</code> with your install path.
+</div>
+
+<!-- ── Main ───────────────────────────────────────────── -->
+<main>
+
+  <!-- Left column: drop + queue -->
+  <div class="left-col">
+    <div>
+      <div class="section-label">Files</div>
+      <div id="dropzone">
+        <input type="file" id="fileInput" multiple
+               accept=".pptx,.ppt,.odp,.docx,.doc,.odt,.rtf,.xlsx,.xls,.ods,.csv,.html,.txt">
+        <input type="file" id="folderInput" webkitdirectory multiple style="display:none">
+        <div class="drop-icon">📂</div>
+        <div class="drop-title">Drop files or a folder here</div>
+        <div class="drop-sub">
+          Supports PPTX · DOCX · XLSX · ODP · ODS · ODT · RTF · CSV · HTML · TXT<br>
+          Mix file types freely — FileForge handles each one.
+        </div>
+        <div class="drop-actions">
+          <button class="btn-outline" onclick="document.getElementById('fileInput').click()">
+            📄 Select files
+          </button>
+          <button class="btn-outline" onclick="document.getElementById('folderInput').click()">
+            📁 Select folder
+          </button>
+        </div>
+      </div>
     </div>
 
-    <div id="fileList"></div>
-
-    <button id="convertBtn" disabled>Convert to PDF</button>
-    <div id="status"></div>
+    <!-- File queue -->
+    <div id="file-queue">
+      <div class="queue-header">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span>Queue</span>
+          <span class="queue-count" id="queue-count">0</span>
+        </div>
+        <button class="clear-btn" onclick="clearAll()">Clear all</button>
+      </div>
+      <div id="file-list"></div>
+    </div>
   </div>
 
+  <!-- Right column: settings -->
+  <div class="right-col">
+    <div id="format-section">
+      <div class="section-label">Output format</div>
+      <div id="format-grid"></div>
+    </div>
+
+    <button id="convert-btn" disabled onclick="startConversion()">
+      <span id="btn-icon">⚡</span>
+      <span id="btn-label">Convert files</span>
+    </button>
+
+    <div class="info-box">
+      <strong>How it works:</strong><br>
+      FileForge uses LibreOffice in headless mode locally on your machine.
+      Files never leave your PC. Select the output format above, then
+      convert — a ZIP downloads automatically when done.<br><br>
+      <strong>Folder support:</strong> click "Select folder" to load all
+      compatible files in a directory at once.
+    </div>
+  </div>
+
+  <!-- Progress panel -->
+  <div id="progress-panel">
+    <div class="panel-header">
+      <div style="display:flex;align-items:center">
+        <span class="status-dot" id="status-dot"></span>
+        <span id="panel-title">Converting…</span>
+      </div>
+      <span style="font-size:11px;color:var(--text-sub);font-family:var(--mono)"
+            id="panel-counter">0 / 0</span>
+    </div>
+    <div class="overall-progress">
+      <div class="progress-label">
+        <span id="progress-file">Initializing…</span>
+        <span id="progress-pct">0%</span>
+      </div>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar-fill" id="progress-fill"></div>
+      </div>
+    </div>
+    <div id="log-panel"></div>
+  </div>
+
+  <!-- Result panel -->
+  <div id="result-panel">
+    <div class="result-grid">
+      <div class="result-stats">
+        <div class="result-stat">
+          <div class="val" id="res-converted">0</div>
+          <div class="lbl">converted</div>
+        </div>
+        <div class="result-stat">
+          <div class="val" id="res-failed" style="color:var(--red)">0</div>
+          <div class="lbl">failed</div>
+        </div>
+        <div class="result-stat">
+          <div class="val" id="res-elapsed">0s</div>
+          <div class="lbl">time</div>
+        </div>
+        <div class="result-stat">
+          <div class="val" id="res-size">0 KB</div>
+          <div class="lbl">zip size</div>
+        </div>
+      </div>
+      <button class="download-btn" id="download-btn">
+        ⬇ Download ZIP
+      </button>
+    </div>
+  </div>
+
+</main>
+
 <script>
-  const dropzone = document.getElementById('dropzone');
-  const fileInput = document.getElementById('fileInput');
-  const fileListEl = document.getElementById('fileList');
-  const convertBtn = document.getElementById('convertBtn');
-  const statusEl = document.getElementById('status');
+/* ── State ───────────────────────────────────────────── */
+let files = [];           // {file, id}
+let selectedFormat = 'pdf';
+let currentJobId = null;
+let conversionMap = {};
 
-  let selectedFiles = [];
+const FORMATS = [
+  { key:'pdf',  emoji:'📄', name:'PDF',  desc:'Universal'},
+  { key:'png',  emoji:'🖼', name:'PNG',  desc:'Images'},
+  { key:'jpg',  emoji:'📸', name:'JPG',  desc:'Images'},
+  { key:'docx', emoji:'📝', name:'DOCX', desc:'Word'},
+  { key:'xlsx', emoji:'📊', name:'XLSX', desc:'Excel'},
+  { key:'html', emoji:'🌐', name:'HTML', desc:'Web'},
+  { key:'txt',  emoji:'📃', name:'TXT',  desc:'Plain text'},
+  { key:'csv',  emoji:'📋', name:'CSV',  desc:'Data'},
+  { key:'odt',  emoji:'📑', name:'ODT',  desc:'OpenDoc'},
+];
 
-  dropzone.addEventListener('click', () => fileInput.click());
+const EXT_ICONS = {
+  pptx:'🎯', ppt:'🎯', odp:'🎨',
+  docx:'📝', doc:'📝', odt:'📑', rtf:'📝',
+  xlsx:'📊', xls:'📊', ods:'📊', csv:'📋',
+  html:'🌐', txt:'📃', pdf:'📄',
+};
+const EXT_COLORS = {
+  pptx:'#f97316', ppt:'#f97316', odp:'#f97316',
+  docx:'#3b82f6', doc:'#3b82f6', odt:'#3b82f6', rtf:'#3b82f6',
+  xlsx:'#22c55e', xls:'#22c55e', ods:'#22c55e', csv:'#06b6d4',
+  html:'#a855f7', txt:'#94a3b8', pdf:'#ef4444',
+};
 
-  dropzone.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    dropzone.classList.add('dragover');
-  });
+/* ── Init ─────────────────────────────────────────────── */
+async function init() {
+  // Load conversion map from server
+  try {
+    const res = await fetch('/api/formats');
+    const data = await res.json();
+    conversionMap = data.conversion_map || {};
+  } catch(e) { /* use empty map, all formats enabled */ }
 
-  dropzone.addEventListener('dragleave', () => {
-    dropzone.classList.remove('dragover');
-  });
+  buildFormatGrid();
+  checkSoffice();
+}
 
-  dropzone.addEventListener('drop', (e) => {
-    e.preventDefault();
-    dropzone.classList.remove('dragover');
-    addFiles(e.dataTransfer.files);
-  });
+async function checkSoffice() {
+  try {
+    const res = await fetch('/api/soffice-status');
+    const { found } = await res.json();
+    if (!found) document.getElementById('lo-warning').style.display = 'block';
+  } catch(e) {}
+}
 
-  fileInput.addEventListener('change', () => {
-    addFiles(fileInput.files);
-  });
+/* ── Format grid ─────────────────────────────────────── */
+function buildFormatGrid() {
+  const grid = document.getElementById('format-grid');
+  grid.innerHTML = '';
+  // Compute available formats based on queued files
+  const available = getAvailableFormats();
 
-  function addFiles(fileListObj) {
-    for (const f of fileListObj) {
-      if (f.name.toLowerCase().endsWith('.pptx') || f.name.toLowerCase().endsWith('.ppt')) {
-        selectedFiles.push(f);
-      }
+  FORMATS.forEach(f => {
+    const enabled = available.size === 0 || available.has(f.key);
+    const card = document.createElement('div');
+    card.className = 'fmt-card' + (f.key === selectedFormat ? ' active' : '') +
+                     (enabled ? '' : ' disabled');
+    card.innerHTML = `
+      <span class="fmt-emoji">${f.emoji}</span>
+      <div class="fmt-name">${f.name}</div>
+      <div class="fmt-desc">${f.desc}</div>`;
+    if (enabled) {
+      card.onclick = () => { selectedFormat = f.key; buildFormatGrid(); };
     }
-    renderFileList();
-  }
-
-  function renderFileList() {
-    fileListEl.innerHTML = '';
-    selectedFiles.forEach(f => {
-      const div = document.createElement('div');
-      div.textContent = f.name;
-      fileListEl.appendChild(div);
-    });
-    convertBtn.disabled = selectedFiles.length === 0;
-  }
-
-  convertBtn.addEventListener('click', async () => {
-    if (selectedFiles.length === 0) return;
-
-    convertBtn.disabled = true;
-    statusEl.textContent = `Converting ${selectedFiles.length} file(s)... this may take a moment.`;
-
-    const formData = new FormData();
-    selectedFiles.forEach(f => formData.append('files', f));
-
-    try {
-      const res = await fetch('/convert', { method: 'POST', body: formData });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        statusEl.textContent = '❌ Error: ' + (err.error || res.statusText);
-        convertBtn.disabled = false;
-        return;
-      }
-
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'converted_pdfs.zip';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-
-      statusEl.textContent = '✅ Done! Your ZIP file has downloaded.';
-      selectedFiles = [];
-      renderFileList();
-    } catch (err) {
-      statusEl.textContent = '❌ Error: ' + err.message;
-    } finally {
-      convertBtn.disabled = false;
-    }
+    grid.appendChild(card);
   });
+}
+
+function getAvailableFormats() {
+  if (files.length === 0) return new Set();
+  const sets = files.map(({file}) => {
+    const ext = '.' + file.name.split('.').pop().toLowerCase();
+    return new Set(conversionMap[ext] || FORMATS.map(f => f.key));
+  });
+  // Union (any file can produce this format)
+  const union = new Set();
+  sets.forEach(s => s.forEach(f => union.add(f)));
+  return union;
+}
+
+/* ── Drop zone ─────────────────────────────────────────── */
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+const folderInput = document.getElementById('folderInput');
+
+dropzone.addEventListener('dragover', e => {
+  e.preventDefault(); dropzone.classList.add('dragover');
+});
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+dropzone.addEventListener('drop', e => {
+  e.preventDefault(); dropzone.classList.remove('dragover');
+  addFiles(e.dataTransfer.files);
+});
+fileInput.addEventListener('change', () => addFiles(fileInput.files));
+folderInput.addEventListener('change', () => addFiles(folderInput.files));
+
+const SUPPORTED_EXTS = new Set([
+  'pptx','ppt','odp','docx','doc','odt','rtf',
+  'xlsx','xls','ods','csv','html','txt'
+]);
+
+function addFiles(list) {
+  let added = 0;
+  for (const file of list) {
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (!SUPPORTED_EXTS.has(ext)) continue;
+    // Deduplicate by name+size
+    const already = files.some(f => f.file.name === file.name && f.file.size === file.size);
+    if (!already) { files.push({ file, id: Date.now() + Math.random() }); added++; }
+  }
+  if (added) renderQueue();
+}
+
+function removeFile(id) {
+  files = files.filter(f => f.id !== id);
+  renderQueue();
+}
+
+function clearAll() {
+  files = [];
+  renderQueue();
+}
+
+function renderQueue() {
+  const queue = document.getElementById('file-queue');
+  const listEl = document.getElementById('file-list');
+  const countEl = document.getElementById('queue-count');
+  const convertBtn = document.getElementById('convert-btn');
+
+  queue.style.display = files.length ? 'flex' : 'none';
+  countEl.textContent = files.length;
+  convertBtn.disabled = files.length === 0;
+
+  listEl.innerHTML = '';
+  files.forEach(({file, id}) => {
+    const ext = file.name.split('.').pop().toLowerCase();
+    const icon = EXT_ICONS[ext] || '📄';
+    const color = EXT_COLORS[ext] || '#94a3b8';
+    const sz = formatSize(file.size);
+    const row = document.createElement('div');
+    row.className = 'file-item';
+    row.innerHTML = `
+      <span class="file-icon">${icon}</span>
+      <div class="file-info">
+        <div class="file-name" title="${file.name}">${file.name}</div>
+        <div class="file-size">${sz}</div>
+      </div>
+      <span class="file-ext-badge" style="background:${color}22;color:${color}">${ext.toUpperCase()}</span>
+      <button class="remove-btn" title="Remove">×</button>`;
+    row.querySelector('.remove-btn').onclick = () => removeFile(id);
+    listEl.appendChild(row);
+  });
+
+  buildFormatGrid();
+}
+
+/* ── Conversion ───────────────────────────────────────── */
+async function startConversion() {
+  if (!files.length) return;
+
+  const btn = document.getElementById('convert-btn');
+  btn.disabled = true;
+  document.getElementById('btn-label').textContent = 'Uploading…';
+  document.getElementById('result-panel').style.display = 'none';
+
+  const formData = new FormData();
+  files.forEach(({file}) => formData.append('files', file));
+  formData.append('format', selectedFormat);
+
+  try {
+    const res = await fetch('/api/convert', { method: 'POST', body: formData });
+    const data = await res.json();
+    if (!res.ok) { alert(data.error || 'Upload failed'); btn.disabled = false; return; }
+    currentJobId = data.job_id;
+    document.getElementById('btn-label').textContent = 'Converting…';
+    showProgressPanel(data.total);
+    listenProgress(data.job_id, data.total);
+  } catch(e) {
+    alert('Error: ' + e.message);
+    btn.disabled = false;
+    document.getElementById('btn-label').textContent = 'Convert files';
+  }
+}
+
+function showProgressPanel(total) {
+  const panel = document.getElementById('progress-panel');
+  panel.style.display = 'block';
+  document.getElementById('log-panel').innerHTML = '';
+  document.getElementById('progress-fill').style.width = '0%';
+  document.getElementById('progress-pct').textContent = '0%';
+  document.getElementById('panel-counter').textContent = `0 / ${total}`;
+  document.getElementById('panel-title').textContent = 'Converting…';
+  document.getElementById('status-dot').className = 'status-dot';
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function listenProgress(jobId, total) {
+  const es = new EventSource(`/api/progress/${jobId}`);
+  let done = 0;
+
+  es.onmessage = e => {
+    const ev = JSON.parse(e.data);
+    appendLog(ev);
+
+    if (ev.type === 'converting' || ev.type === 'done' || ev.type === 'error' || ev.type === 'skip') {
+      if (ev.type !== 'converting') done++;
+      const pct = total ? Math.round((done / total) * 100) : 0;
+      document.getElementById('progress-fill').style.width = pct + '%';
+      document.getElementById('progress-pct').textContent = pct + '%';
+      document.getElementById('panel-counter').textContent = `${done} / ${total}`;
+      document.getElementById('progress-file').textContent =
+        ev.type === 'converting' ? `Converting ${ev.file}…` : ev.file || '';
+    }
+
+    if (ev.type === 'complete') {
+      es.close();
+      document.getElementById('status-dot').className =
+        ev.failed === ev.total ? 'status-dot error' : 'status-dot done';
+      document.getElementById('panel-title').textContent = 'Done';
+      document.getElementById('progress-fill').style.width = '100%';
+      document.getElementById('progress-pct').textContent = '100%';
+
+      showResult(ev);
+      resetConvertBtn();
+    }
+  };
+
+  es.onerror = () => {
+    es.close();
+    appendLogRaw('Connection lost', 'log-error');
+    resetConvertBtn();
+  };
+}
+
+function resetConvertBtn() {
+  const btn = document.getElementById('convert-btn');
+  btn.disabled = false;
+  document.getElementById('btn-label').textContent = 'Convert again';
+  document.getElementById('btn-icon').textContent = '🔄';
+}
+
+/* ── Log ──────────────────────────────────────────────── */
+const TYPE_CLASS = {
+  start: 'log-start', done: 'log-done', error: 'log-error',
+  skip: 'log-skip', complete: 'log-complete', converting: 'log-info',
+};
+
+function appendLog(ev) {
+  const cls = TYPE_CLASS[ev.type] || 'log-info';
+  appendLogRaw(ev.msg, cls);
+}
+function appendLogRaw(text, cls) {
+  const log = document.getElementById('log-panel');
+  const now = new Date().toTimeString().slice(0,8);
+  const line = document.createElement('div');
+  line.className = `log-line ${cls}`;
+  line.innerHTML = `<span class="log-time">${now}</span><span class="log-msg">${esc(text)}</span>`;
+  log.appendChild(line);
+  log.scrollTop = log.scrollHeight;
+}
+
+/* ── Result ───────────────────────────────────────────── */
+function showResult(ev) {
+  const panel = document.getElementById('result-panel');
+  if (!ev.has_download) return;
+  panel.style.display = 'block';
+  document.getElementById('res-converted').textContent = ev.converted;
+  document.getElementById('res-failed').textContent = ev.failed;
+  document.getElementById('res-elapsed').textContent = ev.elapsed + 's';
+  document.getElementById('res-size').textContent =
+    ev.zip_kb >= 1024 ? (ev.zip_kb/1024).toFixed(1)+' MB' : ev.zip_kb+' KB';
+  document.getElementById('download-btn').onclick =
+    () => window.location.href = `/api/download/${currentJobId}`;
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+/* ── Theme toggle ─────────────────────────────────────── */
+document.getElementById('themeBtn').onclick = () => {
+  const html = document.documentElement;
+  const isDark = html.getAttribute('data-theme') === 'dark';
+  html.setAttribute('data-theme', isDark ? 'light' : 'dark');
+  document.getElementById('themeBtn').textContent = isDark ? '☀️' : '🌙';
+};
+
+/* ── Helpers ──────────────────────────────────────────── */
+function formatSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+  return (bytes/(1024*1024)).toFixed(1) + ' MB';
+}
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+init();
 </script>
 </body>
 </html>
